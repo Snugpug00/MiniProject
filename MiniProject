@@ -1,0 +1,101 @@
+#include <iostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+// Define a struct to represent a user
+struct User {
+    string name;
+    vector<string> borrowedBooks;
+};
+
+// Define a struct to represent a book
+struct Book {
+    string title;
+};
+
+// Define a struct to represent the bipartite graph
+struct BipartiteGraph {
+    unordered_map<string, vector<string>> userToBooks;
+    unordered_map<string, vector<string>> bookToUsers;
+};
+
+// Function to recommend books to a user based on their borrowing history and the borrowing history of similar users
+vector<string> recommendBooks(const BipartiteGraph& graph, const User& user) {
+    unordered_set<string> userBooks(user.borrowedBooks.begin(), user.borrowedBooks.end());
+    unordered_set<string> similarUsers;
+    for (const auto& entry : graph.userToBooks) {
+        if (entry.first != user.name) {
+            for (const auto& book : entry.second) {
+                if (userBooks.find(book) != userBooks.end()) {
+                    similarUsers.insert(entry.first);
+                    break;
+                }
+            }
+        }
+    }
+
+    unordered_map<string, int> recommendedBooks;
+    for (const auto& similarUser : similarUsers) {
+        for (const auto& book : graph.userToBooks.at(similarUser)) {
+            if (userBooks.find(book) == userBooks.end()) {
+                recommendedBooks[book]++;
+            }
+        }
+    }
+
+    vector<pair<string, int>> sortedRecommendedBooks(recommendedBooks.begin(), recommendedBooks.end());
+    sort(sortedRecommendedBooks.begin(), sortedRecommendedBooks.end(), [](const auto& a, const auto& b) {
+        return a.second > b.second;
+    });
+
+    vector<string> recommendations;
+    for (const auto& entry : sortedRecommendedBooks) {
+        recommendations.push_back(entry.first);
+    }
+
+    return recommendations;
+}
+
+int main() {
+    // Step 1: Create Dataset
+    unordered_map<string, User> users = {
+        {"Alice", {"Alice", {"Harry Potter", "The Hobbit", "Pride and Prejudice"}}},
+        {"Bob", {"Bob", {"The Hobbit", "The Catcher in the Rye"}}},
+        {"Charlie", {"Charlie", {"Pride and Prejudice", "To Kill a Mockingbird"}}},
+        {"David", {"David", {"Harry Potter", "The Catcher in the Rye"}}},
+        {"Eve", {"Eve", {"The Hobbit", "To Kill a Mockingbird"}}}
+    };
+
+    unordered_map<string, Book> books = {
+        {"Harry Potter", {"Harry Potter"}},
+        {"The Hobbit", {"The Hobbit"}},
+        {"Pride and Prejudice", {"Pride and Prejudice"}},
+        {"The Catcher in the Rye", {"The Catcher in the Rye"}},
+        {"To Kill a Mockingbird", {"To Kill a Mockingbird"}}
+    };
+
+    // Step 2: Construct Bipartite Graph
+    BipartiteGraph graph;
+    for (const auto& entry : users) {
+        for (const auto& book : entry.second.borrowedBooks) {
+            graph.userToBooks[entry.first].push_back(book);
+            graph.bookToUsers[book].push_back(entry.first);
+        }
+    }
+
+    // Step 3: Implement Recommendation Algorithm
+    string userName = "Alice";
+    vector<string> recommendations = recommendBooks(graph, users.at(userName));
+
+    // Step 4: Print Recommendations
+    cout << "Recommendations for " << userName << ":" << endl;
+    for (const auto& book : recommendations) {
+        cout << book << endl;
+    }
+
+    return 0;
+}
